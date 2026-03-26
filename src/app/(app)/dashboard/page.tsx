@@ -3,15 +3,20 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getGuilds } from "@/lib/supabase/queries/guilds";
-import { getActiveTasks } from "@/lib/supabase/queries/tasks";
+import { getActiveTasks, getCompletedTasksInRange } from "@/lib/supabase/queries/tasks";
 import { getTodayCheckin, getRecentCheckins, createCheckin } from "@/lib/supabase/queries/checkins";
 import { calculateHp, getHpColor, getHpLabel } from "@/lib/hp";
 import { getLevelInfo, getXpProgress } from "@/lib/levels";
+import { getPeriodRange, StatPeriod } from "@/lib/date-utils";
 import { Guild, Task, Profile, DailyCheckin, Mood } from "@/lib/types";
 import { Card, CardHeader, CardTitle } from "@/components/ui/card";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { TodayPlan } from "@/components/dashboard/today-plan";
 import { EnergySparkline } from "@/components/dashboard/energy-sparkline";
+import { WeeklyCompletion } from "@/components/dashboard/weekly-completion";
+import { HoursOverview } from "@/components/dashboard/hours-overview";
+import { OverdueCount } from "@/components/dashboard/overdue-count";
+import { GuildWorkload } from "@/components/dashboard/guild-workload";
 import { StreakBadge } from "@/components/gamification/streak-badge";
 import { AnimatedXpCounter } from "@/components/gamification/animated-xp-counter";
 import { DailyCheckinModal } from "@/components/checkin/daily-checkin-modal";
@@ -26,15 +31,19 @@ export default function DashboardPage() {
   const [guilds, setGuilds] = useState<Map<string, Guild>>(new Map());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
+  const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
+  const [period, setPeriod] = useState<StatPeriod>("this-week");
   const [showCheckin, setShowCheckin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
     const supabase = createClient();
-    const [guildList, taskList, recentCheckins, todayCheckin, { data: { user } }] =
+    const { from, to } = getPeriodRange(period);
+    const [guildList, taskList, completed, recentCheckins, todayCheckin, { data: { user } }] =
       await Promise.all([
         getGuilds(supabase),
         getActiveTasks(supabase),
+        getCompletedTasksInRange(supabase, from, to),
         getRecentCheckins(supabase, 7),
         getTodayCheckin(supabase),
         supabase.auth.getUser(),
@@ -42,6 +51,7 @@ export default function DashboardPage() {
 
     setGuilds(new Map(guildList.map((g) => [g.id, g])));
     setTasks(taskList);
+    setCompletedTasks(completed);
     setCheckins(recentCheckins);
 
     if (user) {
@@ -51,7 +61,7 @@ export default function DashboardPage() {
     }
     if (!todayCheckin) setShowCheckin(true);
     setLoading(false);
-  }, []);
+  }, [period]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -149,6 +159,29 @@ export default function DashboardPage() {
             <EnergySparkline checkins={checkins} width={280} height={50} />
           </div>
         </Card>
+      </div>
+
+      {/* Period stats */}
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-sm font-medium text-text-secondary uppercase tracking-wider font-[family-name:var(--font-heading)]">
+          Stats
+        </h2>
+        <select
+          value={period}
+          onChange={(e) => setPeriod(e.target.value as StatPeriod)}
+          className="px-2 py-1 rounded-md text-xs bg-bg-primary border border-border text-text-primary focus:outline-none focus:border-border-light transition-colors"
+        >
+          <option value="this-week">This Week</option>
+          <option value="7-days">Last 7 Days</option>
+          <option value="this-month">This Month</option>
+          <option value="30-days">Last 30 Days</option>
+        </select>
+      </div>
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-4">
+        <WeeklyCompletion activeTasks={tasks} completedTasks={completedTasks} />
+        <HoursOverview activeTasks={tasks} completedTasks={completedTasks} />
+        <OverdueCount tasks={tasks} />
+        <GuildWorkload activeTasks={tasks} completedTasks={completedTasks} guilds={guilds} />
       </div>
 
       {/* Main content row — 2/3 + 1/3 */}
