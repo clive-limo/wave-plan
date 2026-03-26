@@ -9,7 +9,7 @@ import { calculateHp, getHpColor, getHpLabel } from "@/lib/hp";
 import { getLevelInfo, getXpProgress } from "@/lib/levels";
 import { getPeriodRange, StatPeriod } from "@/lib/date-utils";
 import { Guild, Task, Profile, DailyCheckin, Mood } from "@/lib/types";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardTitle } from "@/components/ui/card";
 import { CircularProgress } from "@/components/ui/circular-progress";
 import { TodayPlan } from "@/components/dashboard/today-plan";
 import { EnergySparkline } from "@/components/dashboard/energy-sparkline";
@@ -20,11 +20,11 @@ import { GuildWorkload } from "@/components/dashboard/guild-workload";
 import { StreakBadge } from "@/components/gamification/streak-badge";
 import { AnimatedXpCounter } from "@/components/gamification/animated-xp-counter";
 import { DailyCheckinModal } from "@/components/checkin/daily-checkin-modal";
-import { SkeletonCard } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, FeatureCard, FeatureGrid } from "@/components/ui/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { Heart, Zap, Activity } from "lucide-react";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -73,13 +73,7 @@ export default function DashboardPage() {
   }
 
   if (loading) {
-    return (
-      <div className="animate-fade-in grid gap-4 lg:grid-cols-3">
-        <SkeletonCard /><SkeletonCard /><SkeletonCard />
-        <SkeletonCard className="lg:col-span-2" />
-        <SkeletonCard />
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   const hp = calculateHp(checkins);
@@ -90,11 +84,12 @@ export default function DashboardPage() {
 
   if (hasNoData) {
     return (
-      <div className="animate-fade-in">
+      <div className="animate-fade-in flex flex-col h-[calc(100vh-140px)]">
         <EmptyState
           icon={<span>{"\u2694\uFE0F"}</span>}
           title="Welcome to Wave Plan"
           description="Your adventure begins here. Set up your first guild and start tracking tasks to see your dashboard come alive."
+          className="flex-1"
         >
           <FeatureGrid>
             <FeatureCard icon={<span>{"\uD83D\uDEE1\uFE0F"}</span>} title="Create a Guild" description="Guilds represent your jobs or roles. Each gets its own color and task queue." action={<Link href="/guilds" className="text-xs text-text-primary hover:underline">Set up guilds &rarr;</Link>} />
@@ -108,98 +103,119 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="animate-fade-in">
-      {/* Top stats row — 3 columns */}
-      <div className="grid gap-4 lg:grid-cols-3 mb-4">
-        {/* HP */}
-        <Card className="flex flex-col items-center py-5">
-          <CardTitle className="mb-3">HP</CardTitle>
-          <CircularProgress
-            value={hp}
-            size={100}
-            strokeWidth={8}
-            color={getHpColor(hp)}
-            label={String(hp)}
-            sublabel={getHpLabel(hp)}
-          />
-          {hp < 30 && (
-            <p className="text-xs text-hp-low mt-3 text-center">
-              Energy is low. Consider taking a break.
-            </p>
-          )}
-        </Card>
-
-        {/* XP */}
-        <Card className="flex flex-col items-center py-5">
-          <CardTitle className="mb-3">Experience</CardTitle>
-          <CircularProgress
-            value={xpProgress * 100}
-            size={100}
-            strokeWidth={8}
-            color="var(--color-gold)"
-            label={`Lv.${levelInfo.level}`}
-            sublabel={levelInfo.title}
-          />
-          <p className="text-xs text-text-muted mt-3">
-            <AnimatedXpCounter value={totalXp} /> / {levelInfo.xpForNext} XP
-          </p>
-        </Card>
-
-        {/* Streak + Energy */}
-        <Card className="flex flex-col py-5">
-          <CardTitle className="mb-3">Activity</CardTitle>
-          <div className="flex items-center justify-between mb-4">
-            <StreakBadge streak={profile?.current_streak ?? 0} />
-            {(profile?.longest_streak ?? 0) > 0 && (
-              <Badge variant="default">Best: {profile?.longest_streak}d</Badge>
-            )}
-          </div>
-          <div className="mt-auto">
-            <p className="text-xs text-text-muted mb-2">Energy (7 days)</p>
-            <EnergySparkline checkins={checkins} width={280} height={50} />
+    <div className="animate-fade-in flex flex-col gap-6 min-h-[calc(100vh-140px)]">
+      {/* Hero Stats Row */}
+      <div className="grid gap-6 lg:grid-cols-4">
+        <Card className="flex flex-col items-center justify-center p-6 bg-bg-card border-border/60 relative overflow-hidden group">
+          <Heart size={80} strokeWidth={1} className="absolute -bottom-6 -right-4 text-text-muted/[0.06] pointer-events-none" />
+          <div className="relative z-10 flex flex-col items-center">
+            <CircularProgress
+              value={hp}
+              size={110}
+              strokeWidth={8}
+              color={getHpColor(hp)}
+              label={String(hp)}
+              sublabel={getHpLabel(hp)}
+            />
+            <div className="mt-4 flex flex-col items-center gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Vitality</span>
+              {hp < 30 && <Badge className="text-[8px] border border-hp-low/50 text-hp-low bg-hp-low/5 font-black uppercase tracking-tighter">Emergency</Badge>}
+            </div>
           </div>
         </Card>
+
+        <Card className="flex flex-col items-center justify-center p-6 bg-bg-card border-border/60 relative overflow-hidden group">
+          <Zap size={80} strokeWidth={1} className="absolute -bottom-6 -right-4 text-text-muted/[0.06] pointer-events-none" />
+          <div className="relative z-10 flex flex-col items-center">
+            <CircularProgress
+              value={xpProgress * 100}
+              size={110}
+              strokeWidth={8}
+              color="var(--color-gold)"
+              label={`Lv.${levelInfo.level}`}
+              sublabel={levelInfo.title}
+            />
+            <div className="mt-4 flex flex-col items-center gap-1">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Mastery</span>
+              <p className="text-[10px] font-mono text-gold font-bold">
+                <AnimatedXpCounter value={totalXp} /> / {levelInfo.xpForNext}
+              </p>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="lg:col-span-2 flex flex-col p-6 bg-bg-card border-border/60 relative overflow-hidden group">
+          <Activity size={80} strokeWidth={1} className="absolute -bottom-6 -right-4 text-text-muted/[0.06] pointer-events-none" />
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Activity Pulse</span>
+                <h3 className="text-sm font-semibold text-text-primary mt-1">Energy Variance</h3>
+              </div>
+              <div className="flex items-center gap-4">
+                {(profile?.longest_streak ?? 0) > 0 && (
+                  <div className="text-[9px] font-bold text-gold uppercase tracking-widest bg-gold/5 px-2 py-0.5 rounded border border-gold/20">
+                    PB: {profile?.longest_streak}d
+                  </div>
+                )}
+                <StreakBadge streak={profile?.current_streak ?? 0} />
+              </div>
+            </div>
+            <div className="mt-auto w-full">
+              <EnergySparkline checkins={checkins} height={90} />
+            </div>
+          </div>
+        </Card>
       </div>
 
-      {/* Period stats */}
-      <div className="flex items-center justify-between mb-3">
-        <h2 className="text-sm font-medium text-text-secondary uppercase tracking-wider font-[family-name:var(--font-heading)]">
-          Stats
-        </h2>
-        <select
-          value={period}
-          onChange={(e) => setPeriod(e.target.value as StatPeriod)}
-          className="px-2 py-1 rounded-md text-xs bg-bg-primary border border-border text-text-primary focus:outline-none focus:border-border-light transition-colors"
-        >
-          <option value="this-week">This Week</option>
-          <option value="7-days">Last 7 Days</option>
-          <option value="this-month">This Month</option>
-          <option value="30-days">Last 30 Days</option>
-        </select>
-      </div>
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4 mb-4">
-        <WeeklyCompletion activeTasks={tasks} completedTasks={completedTasks} />
-        <HoursOverview activeTasks={tasks} completedTasks={completedTasks} />
-        <OverdueCount tasks={tasks} />
-        <GuildWorkload activeTasks={tasks} completedTasks={completedTasks} guilds={guilds} />
-      </div>
+      {/* Stats Section with Select */}
+      <section className="flex flex-col gap-4">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <h2 className="text-[11px] font-bold text-text-primary uppercase tracking-widest">
+              Performance Insights
+            </h2>
+            <div className="h-[1px] w-16 bg-border/60" />
+          </div>
+          <select
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as StatPeriod)}
+            className="px-2 py-1.5 rounded bg-bg-card border border-border/60 text-[10px] font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-border transition-all uppercase tracking-tight"
+          >
+            <option value="this-week">This Week</option>
+            <option value="7-days">Last 7 Days</option>
+            <option value="this-month">This Month</option>
+            <option value="30-days">Last 30 Days</option>
+          </select>
+        </div>
+        
+        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+          <WeeklyCompletion activeTasks={tasks} completedTasks={completedTasks} />
+          <HoursOverview activeTasks={tasks} completedTasks={completedTasks} />
+          <OverdueCount tasks={tasks} />
+          <GuildWorkload activeTasks={tasks} completedTasks={completedTasks} guilds={guilds} />
+        </div>
+      </section>
 
       {/* Main content row — 2/3 + 1/3 */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card flush className="lg:col-span-2">
-          <div className="px-4 pt-4 pb-2">
-            <CardTitle>Today&apos;s Plan</CardTitle>
+      <div className="grid gap-6 lg:grid-cols-3 flex-1">
+        <Card flush className="lg:col-span-2 border-border/60 bg-bg-card flex flex-col h-full">
+          <div className="px-6 py-4 border-b border-border/60 flex items-center justify-between">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Today&apos;s Plan</CardTitle>
+            <Link href="/planner" className="text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-text-primary transition-colors">
+              Open Planner &rarr;
+            </Link>
           </div>
-          <div className="px-4 pb-4">
+          <div className="px-6 py-4 flex-1">
             <TodayPlan tasks={tasks} guilds={guilds} />
           </div>
         </Card>
 
-        <Card flush>
-          <div className="px-4 pt-4 pb-2">
-            <CardTitle>Upcoming</CardTitle>
+        <Card flush className="border-border/60 bg-bg-card flex flex-col h-full">
+          <div className="px-6 py-4 border-b border-border/60 flex items-center justify-between">
+            <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Upcoming Deadlines</CardTitle>
           </div>
-          <div className="px-4 pb-4">
+          <div className="px-6 py-4 flex-1">
             <UpcomingTasks tasks={tasks} guilds={guilds} />
           </div>
         </Card>
@@ -220,26 +236,60 @@ function UpcomingTasks({ tasks, guilds }: { tasks: Task[]; guilds: Map<string, G
   const upcoming = tasks
     .filter((t) => t.due_date && t.due_date >= today && t.due_date <= cutoff && t.status !== "done")
     .sort((a, b) => (a.due_date! > b.due_date! ? 1 : -1))
-    .slice(0, 8);
+    .slice(0, 10);
 
   if (upcoming.length === 0) {
-    return <p className="text-text-muted text-sm py-4">No deadlines in the next 3 days.</p>;
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-center p-4">
+        <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1 opacity-50">Clear Skies</p>
+        <p className="text-xs text-text-muted">No deadlines in the next 3 days.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="divide-y divide-border">
+    <div className="flex flex-col gap-1">
       {upcoming.map((task) => {
         const guild = task.guild_id ? guilds.get(task.guild_id) : null;
         return (
-          <div key={task.id} className="flex items-center gap-3 py-2.5 text-sm">
-            {guild && <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: guild.color }} />}
-            <span className="truncate flex-1">{task.title}</span>
-            <span className="text-xs text-text-muted flex-shrink-0">
+          <div key={task.id} className="flex items-center gap-3 py-3 px-2 rounded hover:bg-bg-primary/50 transition-colors text-sm group">
+            <div className="w-1 h-3 rounded-full flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: guild?.color ?? "var(--color-text-muted)" }} />
+            <span className="truncate flex-1 font-medium text-text-secondary group-hover:text-text-primary transition-colors">{task.title}</span>
+            <span className="text-[10px] font-mono text-text-muted flex-shrink-0 tabular-nums">
               {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function DashboardSkeleton() {
+  return (
+    <div className="animate-pulse flex flex-col gap-6 min-h-[calc(100vh-140px)]">
+      <div className="grid gap-6 lg:grid-cols-4">
+        <Skeleton className="h-40 rounded-lg border-border/60" />
+        <Skeleton className="h-40 rounded-lg border-border/60" />
+        <Skeleton className="lg:col-span-2 h-40 rounded-lg border-border/60" />
+      </div>
+      
+      <div className="flex items-center justify-between px-1">
+        <Skeleton className="h-3 w-40 rounded" />
+        <Skeleton className="h-8 w-32 rounded" />
+      </div>
+
+      <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+        <Skeleton className="h-40 rounded-lg border-border/60" />
+        <Skeleton className="h-40 rounded-lg border-border/60" />
+        <Skeleton className="h-40 rounded-lg border-border/60" />
+        <Skeleton className="h-40 rounded-lg border-border/60" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3 flex-1">
+        <Skeleton className="lg:col-span-2 min-h-[400px] rounded-lg border-border/60" />
+        <Skeleton className="min-h-[400px] rounded-lg border-border/60" />
+      </div>
     </div>
   );
 }

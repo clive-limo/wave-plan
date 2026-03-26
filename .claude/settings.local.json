@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -r 'from lucide' C:/dev-files/wave-plan/src --include=*.tsx --include=*.ts -l)"
     ]
   }
 }

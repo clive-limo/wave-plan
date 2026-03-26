@@ -9,9 +9,10 @@ export function Card({ elevated, flush, className = "", children, ...props }: Ca
   return (
     <div
       className={`
-        rounded-lg border border-border
+        rounded-lg border border-border/60
         ${flush ? "p-0" : "p-4"}
         ${elevated ? "bg-bg-elevated" : "bg-bg-card"}
+        transition-colors duration-200
         ${className}
       `}
       {...props}
