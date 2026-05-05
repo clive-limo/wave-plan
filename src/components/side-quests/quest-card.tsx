@@ -1,8 +1,7 @@
 "use client";
 
-import { Task } from "@/lib/types";
-import { Badge } from "@/components/ui/badge";
-import { getTaskProgress } from "@/lib/progress";
+import { Task, Priority } from "@/lib/types";
+import { Icon } from "@/components/ui/icon";
 
 interface QuestCardProps {
   task: Task;
@@ -10,97 +9,91 @@ interface QuestCardProps {
   onDelete?: (id: string) => void;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  fun: "sparkles",
-  learning: "book-open",
-  errands: "check-circle",
-  health: "heart",
-  other: "star",
+const CATEGORY_META: Record<string, { icon: string; label: string }> = {
+  fun: { icon: "🎉", label: "Fun" },
+  learning: { icon: "📖", label: "Learning" },
+  errands: { icon: "🛒", label: "Errands" },
+  health: { icon: "🌱", label: "Health" },
+  other: { icon: "✨", label: "Other" },
 };
 
-const CATEGORY_LABELS: Record<string, string> = {
-  fun: "Fun",
-  learning: "Learning",
-  errands: "Errands",
-  health: "Health",
-  other: "Other",
+const PRIORITY_PILL: Record<Priority, string> = {
+  urgent: "pill-red",
+  normal: "pill-sun",
+  low: "pill-leaf",
+};
+const PRIORITY_LABEL: Record<Priority, string> = {
+  urgent: "Urgent",
+  normal: "Normal",
+  low: "Chill",
 };
 
-function formatDate(date: string | null): string {
-  if (!date) return "";
-  return new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatWhen(date: string | null): string {
+  if (!date) return "Anytime";
+  const d = new Date(date);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d.getTime() - today.getTime()) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff > 1 && diff < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function QuestCard({ task, onStatusChange, onDelete }: QuestCardProps) {
   const isDone = task.status === "done";
+  const cat = task.category ? CATEGORY_META[task.category] : null;
+
+  if (isDone) {
+    return (
+      <div className="px-5 py-3.5 flex items-center gap-3 opacity-60 border-t border-border/50 first:border-t-0">
+        <div className="w-[22px] h-[22px] rounded-lg bg-[#4EDD8E] flex items-center justify-center flex-shrink-0">
+          <Icon name="check" size={13} color="#0E0A07" strokeWidth={3} />
+        </div>
+        <span className="line-through flex-1 truncate">{task.title}</span>
+      </div>
+    );
+  }
 
   return (
-    <div
-      className={`
-        p-4 rounded-lg border border-border bg-bg-card
-        transition-all duration-200
-        ${isDone ? "opacity-50" : "hover:bg-bg-elevated hover:border-gold/20"}
-      `}
-    >
-      <div className="flex items-start gap-3">
+    <div className="card-surface p-[18px] cursor-pointer transition-transform hover:-translate-y-0.5">
+      <div className="flex items-start gap-3 mb-2.5">
         <button
-          onClick={(e) => onStatusChange(task.id, isDone ? "todo" : "done", { x: e.clientX, y: e.clientY })}
-          className={`
-            mt-0.5 w-5 h-5 rounded flex-shrink-0 cursor-pointer transition-colors
-            ${isDone
-              ? "bg-gold text-bg-primary flex items-center justify-center text-xs"
-              : "border-2 border-gold/40 hover:border-gold"
-            }
-          `}
-          style={{ borderRadius: "4px" }}
-        >
-          {isDone && "\u2713"}
-        </button>
-
+          onClick={(e) =>
+            onStatusChange(task.id, "done", { x: e.clientX, y: e.clientY })
+          }
+          className="w-[22px] h-[22px] rounded-lg flex-shrink-0 mt-0.5 shadow-[0_0_0_1.5px_var(--color-text-faint)_inset] transition-colors hover:shadow-[0_0_0_1.5px_var(--color-text-secondary)_inset]"
+          aria-label="Complete"
+        />
         <div className="flex-1 min-w-0">
-          <p className={`text-sm font-medium ${isDone ? "line-through text-text-muted" : ""}`}>
-            {task.title}
-          </p>
+          <div className="text-[15px] font-semibold leading-snug">{task.title}</div>
           {task.description && (
-            <p className="text-xs text-text-muted mt-1 line-clamp-2">{task.description}</p>
-          )}
-          <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {task.category && (
-              <Badge variant="gold">{CATEGORY_LABELS[task.category] ?? task.category}</Badge>
-            )}
-            <Badge variant={task.priority}>{task.priority}</Badge>
-            {task.due_date && (
-              <span className="text-xs text-text-muted">{formatDate(task.due_date)}</span>
-            )}
-            {task.xp_awarded && (
-              <Badge variant="gold">+{task.xp_awarded} XP</Badge>
-            )}
-          </div>
-
-          {/* Progress bar for multi-day quests */}
-          {task.total_hours && task.total_hours > 0 && (
-            <div className="mt-2 flex items-center gap-2">
-              <div className="flex-1 h-[3px] bg-bg-primary rounded-full overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all bg-gold"
-                  style={{ width: `${(getTaskProgress(task) ?? 0) * 100}%` }}
-                />
-              </div>
-              <span className="text-[10px] text-text-muted flex-shrink-0">
-                {task.actual_hours ?? 0}/{task.total_hours}h
-              </span>
-            </div>
+            <div className="text-xs text-text-secondary mt-1">{task.description}</div>
           )}
         </div>
-
-        {onDelete && !isDone && (
+        {onDelete && (
           <button
             onClick={() => onDelete(task.id)}
-            className="text-text-muted hover:text-hp-low text-sm cursor-pointer transition-colors"
+            className="text-text-muted hover:text-guild-coral transition-colors flex-shrink-0"
+            aria-label="Delete"
           >
-            &times;
+            <Icon name="x" size={14} />
           </button>
         )}
+      </div>
+      <div className="flex justify-between items-center flex-wrap gap-1.5">
+        <span className={`pill ${PRIORITY_PILL[task.priority]}`}>
+          {PRIORITY_LABEL[task.priority]}
+        </span>
+        <span className="text-[11px] text-text-muted inline-flex items-center gap-1">
+          {cat && (
+            <>
+              <span>{cat.icon}</span>
+              {cat.label} ·{" "}
+            </>
+          )}
+          {formatWhen(task.due_date)}
+        </span>
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { TopBar } from "@/components/layout/top-bar";
 import { CelebrationProvider } from "@/contexts/celebration-context";
 import { CelebrationOverlay } from "@/components/gamification/celebration-overlay";
+import { StreakValidator } from "@/components/gamification/streak-validator";
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -19,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         <MobileNav />
       </div>
+      <StreakValidator />
       <CelebrationOverlay />
     </CelebrationProvider>
   );

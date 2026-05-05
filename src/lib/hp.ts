@@ -33,9 +33,9 @@ export function calculateHp(checkins: CheckinData[]): number {
 }
 
 export function getHpColor(hp: number): string {
-  if (hp < 30) return "#e05252";
-  if (hp < 60) return "#d4a843";
-  return "#4abe7a";
+  if (hp < 30) return "#FF5A5A";
+  if (hp < 60) return "#FF8F4D";
+  return "#4EDD8E";
 }
 
 export function getHpLabel(hp: number): string {

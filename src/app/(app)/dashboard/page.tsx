@@ -7,23 +7,19 @@ import { getActiveTasks, getCompletedTasksInRange } from "@/lib/supabase/queries
 import { getTodayCheckin, getRecentCheckins, createCheckin } from "@/lib/supabase/queries/checkins";
 import { calculateHp, getHpColor, getHpLabel } from "@/lib/hp";
 import { getLevelInfo, getXpProgress } from "@/lib/levels";
-import { getPeriodRange, StatPeriod } from "@/lib/date-utils";
+import { getPeriodRange, StatPeriod, toDateString } from "@/lib/date-utils";
 import { Guild, Task, Profile, DailyCheckin, Mood } from "@/lib/types";
-import { Card, CardTitle } from "@/components/ui/card";
-import { CircularProgress } from "@/components/ui/circular-progress";
 import { TodayPlan } from "@/components/dashboard/today-plan";
 import { EnergySparkline } from "@/components/dashboard/energy-sparkline";
 import { WeeklyCompletion } from "@/components/dashboard/weekly-completion";
 import { HoursOverview } from "@/components/dashboard/hours-overview";
 import { OverdueCount } from "@/components/dashboard/overdue-count";
 import { GuildWorkload } from "@/components/dashboard/guild-workload";
-import { StreakBadge } from "@/components/gamification/streak-badge";
-import { AnimatedXpCounter } from "@/components/gamification/animated-xp-counter";
 import { DailyCheckinModal } from "@/components/checkin/daily-checkin-modal";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, FeatureCard, FeatureGrid } from "@/components/ui/empty-state";
-import { Badge } from "@/components/ui/badge";
-import { Heart, Zap, Activity } from "lucide-react";
+import { Sticker, CharacterGauge } from "@/components/ui/sticker";
+import { Heart, Plus, ArrowRight, Shield, Flame } from "lucide-react";
 import Link from "next/link";
 
 export default function DashboardPage() {
@@ -86,15 +82,30 @@ export default function DashboardPage() {
     return (
       <div className="animate-fade-in flex flex-col h-[calc(100vh-140px)]">
         <EmptyState
-          icon={<span>{"\u2694\uFE0F"}</span>}
-          title="Welcome to Wave Plan"
-          description="Your adventure begins here. Set up your first guild and start tracking tasks to see your dashboard come alive."
+          icon={<Sticker shape="blob" color="#FF6D29" size={80} expression="happy" />}
+          title="The water's been waiting."
+          description="Set up a crew, drop your first quest, and the day starts to take shape."
           className="flex-1"
         >
           <FeatureGrid>
-            <FeatureCard icon={<span>{"\uD83D\uDEE1\uFE0F"}</span>} title="Create a Guild" description="Guilds represent your jobs or roles. Each gets its own color and task queue." action={<Link href="/guilds" className="text-xs text-text-primary hover:underline">Set up guilds &rarr;</Link>} />
-            <FeatureCard icon={<span>{"\uD83D\uDDFA\uFE0F"}</span>} title="Start Side Quests" description="Track personal tasks, fun projects, and important things to remember." action={<Link href="/side-quests" className="text-xs text-text-primary hover:underline">View quests &rarr;</Link>} />
-            <FeatureCard icon={<span>{"\uD83D\uDCC5"}</span>} title="Plan Your Week" description="Assign hours to tasks and see them distributed across your calendar." action={<Link href="/planner" className="text-xs text-text-primary hover:underline">Open planner &rarr;</Link>} />
+            <FeatureCard
+              icon={<Sticker shape="hex" color="#2B6BFF" size={44} expression="happy" />}
+              title="Build your crew"
+              description="Guilds are your jobs and roles. Each gets its own colour and queue."
+              action={<Link href="/guilds" className="text-xs text-text-primary hover:underline">Set up guilds &rarr;</Link>}
+            />
+            <FeatureCard
+              icon={<Sticker shape="star" color="#FFC857" size={44} expression="happy" />}
+              title="Drop a side quest"
+              description="The personal stuff — fun things, errands, projects, dreams."
+              action={<Link href="/side-quests" className="text-xs text-text-primary hover:underline">View quests &rarr;</Link>}
+            />
+            <FeatureCard
+              icon={<Sticker shape="cloud" color="#2DBE6C" size={44} expression="happy" />}
+              title="Block your week"
+              description="Drag hours onto the calendar. Watch the wave take shape."
+              action={<Link href="/planner" className="text-xs text-text-primary hover:underline">Open planner &rarr;</Link>}
+            />
           </FeatureGrid>
         </EmptyState>
         <DailyCheckinModal open={showCheckin} onSubmit={handleCheckin} />
@@ -102,85 +113,188 @@ export default function DashboardPage() {
     );
   }
 
+  // Today summary
+  const today = toDateString(new Date());
+  const todayTasks = tasks.filter((t) => {
+    if (!t.start_date && !t.due_date) return false;
+    const start = t.start_date ?? t.due_date!;
+    const end = t.due_date ?? start;
+    return today >= start && today <= end;
+  });
+  const todayDoneCount = todayTasks.filter((t) => t.status === "done").length;
+  const todayTotal = todayTasks.length;
+  const urgentToday = todayTasks.filter((t) => t.priority === "urgent" && t.status !== "done").length;
+
+  const energyAvg = checkins.length
+    ? checkins.reduce((s, c) => s + c.energy, 0) / checkins.length
+    : 0;
+  const energyTrend = checkins.length >= 2
+    ? checkins[checkins.length - 1].energy - checkins[0].energy
+    : 0;
+
+  const streak = profile?.current_streak ?? 0;
+  const shields = profile?.streak_shields_remaining ?? 0;
+
+  const dateLabel = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+  const firstName = profile?.display_name?.split(" ")[0] ?? "there";
+
   return (
-    <div className="animate-fade-in flex flex-col gap-6 min-h-[calc(100vh-140px)]">
-      {/* Hero Stats Row */}
-      <div className="grid gap-6 lg:grid-cols-4">
-        <Card className="flex flex-col items-center justify-center p-6 bg-bg-card border-border/60 relative overflow-hidden group">
-          <Heart size={80} strokeWidth={1} className="absolute -bottom-6 -right-4 text-text-muted/[0.06] pointer-events-none" />
-          <div className="relative z-10 flex flex-col items-center">
-            <CircularProgress
-              value={hp}
-              size={110}
-              strokeWidth={8}
-              color={getHpColor(hp)}
-              label={String(hp)}
-              sublabel={getHpLabel(hp)}
-            />
-            <div className="mt-4 flex flex-col items-center gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Vitality</span>
-              {hp < 30 && <Badge className="text-[8px] border border-hp-low/50 text-hp-low bg-hp-low/5 font-black uppercase tracking-tighter">Emergency</Badge>}
-            </div>
+    <div className="animate-fade-in flex flex-col gap-5">
+      {/* Greeting */}
+      <div className="flex items-start gap-4 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="font-[family-name:var(--font-mono)] text-[11px] text-text-muted uppercase tracking-[.15em] mb-1">
+            {dateLabel}
           </div>
-        </Card>
-
-        <Card className="flex flex-col items-center justify-center p-6 bg-bg-card border-border/60 relative overflow-hidden group">
-          <Zap size={80} strokeWidth={1} className="absolute -bottom-6 -right-4 text-text-muted/[0.06] pointer-events-none" />
-          <div className="relative z-10 flex flex-col items-center">
-            <CircularProgress
-              value={xpProgress * 100}
-              size={110}
-              strokeWidth={8}
-              color="var(--color-gold)"
-              label={`Lv.${levelInfo.level}`}
-              sublabel={levelInfo.title}
-            />
-            <div className="mt-4 flex flex-col items-center gap-1">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Mastery</span>
-              <p className="text-[10px] font-mono text-gold font-bold">
-                <AnimatedXpCounter value={totalXp} /> / {levelInfo.xpForNext}
-              </p>
-            </div>
-          </div>
-        </Card>
-
-        <Card className="lg:col-span-2 flex flex-col p-6 bg-bg-card border-border/60 relative overflow-hidden group">
-          <Activity size={80} strokeWidth={1} className="absolute -bottom-6 -right-4 text-text-muted/[0.06] pointer-events-none" />
-          <div className="relative z-10 flex flex-col h-full">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">Activity Pulse</span>
-                <h3 className="text-sm font-semibold text-text-primary mt-1">Energy Variance</h3>
-              </div>
-              <div className="flex items-center gap-4">
-                {(profile?.longest_streak ?? 0) > 0 && (
-                  <div className="text-[9px] font-bold text-gold uppercase tracking-widest bg-gold/5 px-2 py-0.5 rounded border border-gold/20">
-                    PB: {profile?.longest_streak}d
-                  </div>
-                )}
-                <StreakBadge streak={profile?.current_streak ?? 0} />
-              </div>
-            </div>
-            <div className="mt-auto w-full">
-              <EnergySparkline checkins={checkins} height={90} />
-            </div>
-          </div>
-        </Card>
+          <h1 className="font-[family-name:var(--font-heading)] text-3xl md:text-[32px] font-bold tracking-tight m-0">
+            Morning, {firstName}.{" "}
+            <span className="text-gold">The water&apos;s good.</span>
+          </h1>
+          <p className="text-text-secondary mt-1.5">
+            {todayDoneCount} of {todayTotal} blocks done
+            {streak > 0 && <> · {streak}-day streak burning</>}
+            {urgentToday > 0 && <> · {urgentToday} urgent thing{urgentToday === 1 ? "" : "s"} waiting on you.</>}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setShowCheckin(true)}
+            className="btn btn-ghost"
+          >
+            <Heart size={14} /> Check in
+          </button>
+          <Link href="/side-quests" className="btn btn-primary">
+            <Plus size={14} /> New quest
+          </Link>
+        </div>
       </div>
 
-      {/* Stats Section with Select */}
-      <section className="flex flex-col gap-4">
+      {/* Hero — 4 character gauge cards */}
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {/* HP */}
+        <HeroCard glowColor="rgba(255,109,41,0.18)">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-[.15em]">
+                Vitals
+              </div>
+              <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold mt-0.5">
+                {hp}
+                <span className="text-text-faint text-lg">/100</span>
+              </div>
+              <div className="pill pill-sun mt-2">{getHpLabel(hp)}</div>
+            </div>
+            <CharacterGauge
+              value={hp}
+              max={100}
+              size={88}
+              stroke={9}
+              color={getHpColor(hp)}
+              shape="heart"
+              expression={hp < 30 ? "flat" : "happy"}
+            />
+          </div>
+          <p className="text-xs text-text-secondary mt-3.5 m-0">
+            Eat lunch. Take the 3pm walk. Be nice to your knees.
+          </p>
+        </HeroCard>
+
+        {/* Level / XP */}
+        <HeroCard glowColor="rgba(255,200,87,0.18)">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-[.15em]">
+                Level {levelInfo.level}
+              </div>
+              <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold mt-0.5">
+                <span className="gold-shimmer">{levelInfo.title}</span>
+              </div>
+              <div className="pill pill-gold mt-2">
+                {Math.max(0, levelInfo.xpForNext - totalXp)} XP to lvl {levelInfo.level + 1}
+              </div>
+            </div>
+            <CharacterGauge
+              value={xpProgress * 100}
+              max={100}
+              size={88}
+              stroke={9}
+              color="#FFC857"
+              shape="star"
+              expression="happy"
+            />
+          </div>
+          <p className="text-xs text-text-secondary mt-3.5 m-0">
+            Keep at it — every quest stacks gold on your wave.
+          </p>
+        </HeroCard>
+
+        {/* Energy pulse */}
+        <HeroCard glowColor="rgba(43,107,255,0.18)">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-[.15em]">
+                Energy pulse
+              </div>
+              <div className="font-[family-name:var(--font-heading)] text-[28px] font-bold mt-0.5">
+                {energyAvg ? energyAvg.toFixed(1) : "—"}
+                <span className="text-text-faint text-lg">/5</span>
+              </div>
+              <div className="pill pill-blue mt-2">
+                {energyTrend > 0 ? "Trending up ↑" : energyTrend < 0 ? "Easing off ↓" : "Steady →"}
+              </div>
+            </div>
+            <Sticker shape="cloud" color="#2B6BFF" size={64} expression="happy" />
+          </div>
+          <div className="mt-3.5 -mx-1">
+            <EnergySparkline checkins={checkins} height={48} />
+          </div>
+        </HeroCard>
+
+        {/* Streak */}
+        <HeroCard glowColor="rgba(255,90,90,0.18)">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-[.15em]">
+                Streak on fire
+              </div>
+              <div className="font-[family-name:var(--font-heading)] text-[40px] font-bold mt-0.5 leading-none">
+                {streak}
+                <span className="text-text-faint text-lg ml-1">days</span>
+              </div>
+              <div className="mt-2 flex gap-1.5 items-center flex-wrap">
+                <div className="pill pill-gold">
+                  <Shield size={11} /> {shields} shield{shields === 1 ? "" : "s"}
+                </div>
+                {(profile?.longest_streak ?? 0) > 0 && (
+                  <div className="pill">PB {profile?.longest_streak}d</div>
+                )}
+              </div>
+            </div>
+            <Sticker shape="triangle" color="#FF3D2E" size={64} expression="open" tilt={-6} />
+          </div>
+          <p className="text-xs text-text-secondary mt-3.5 m-0">
+            Miss a day and a shield catches you{shields > 0 ? `. You've got ${shields}.` : "."}
+          </p>
+        </HeroCard>
+      </div>
+
+      {/* Performance insights */}
+      <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <div className="flex items-center gap-2">
             <h2 className="text-[11px] font-bold text-text-primary uppercase tracking-widest">
-              Performance Insights
+              How the week is shaping up
             </h2>
-            <div className="h-[1px] w-16 bg-border/60" />
+            <div className="h-px w-16 bg-border-light/60" />
           </div>
           <select
             value={period}
             onChange={(e) => setPeriod(e.target.value as StatPeriod)}
-            className="px-2 py-1.5 rounded bg-bg-card border border-border/60 text-[10px] font-bold text-text-primary focus:outline-none focus:ring-1 focus:ring-border transition-all uppercase tracking-tight"
+            className="px-3 py-1.5 rounded-full bg-white/[0.04] shadow-[0_0_0_1px_rgba(255,246,236,0.10)_inset] text-[10px] font-bold text-text-primary uppercase tracking-tight focus:outline-none focus:ring-1 focus:ring-sun cursor-pointer"
           >
             <option value="this-week">This Week</option>
             <option value="7-days">Last 7 Days</option>
@@ -188,8 +302,8 @@ export default function DashboardPage() {
             <option value="30-days">Last 30 Days</option>
           </select>
         </div>
-        
-        <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
+
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <WeeklyCompletion activeTasks={tasks} completedTasks={completedTasks} />
           <HoursOverview activeTasks={tasks} completedTasks={completedTasks} />
           <OverdueCount tasks={tasks} />
@@ -197,28 +311,37 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      {/* Main content row — 2/3 + 1/3 */}
-      <div className="grid gap-6 lg:grid-cols-3 flex-1">
-        <Card flush className="lg:col-span-2 border-border/60 bg-bg-card flex flex-col h-full">
-          <div className="px-6 py-4 border-b border-border/60 flex items-center justify-between">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Today&apos;s Plan</CardTitle>
-            <Link href="/planner" className="text-[10px] font-bold uppercase tracking-widest text-text-muted hover:text-text-primary transition-colors">
-              Open Planner &rarr;
+      {/* Today + Upcoming */}
+      <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
+        <div className="card-surface p-6 lg:col-span-2 flex flex-col">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="font-[family-name:var(--font-heading)] text-xl font-bold m-0">
+                Today&apos;s wave
+              </h3>
+              <p className="text-xs text-text-secondary mt-0.5">
+                {todayDoneCount} done · {Math.max(0, todayTotal - todayDoneCount)} ahead
+              </p>
+            </div>
+            <Link
+              href="/planner"
+              className="btn btn-ghost text-xs px-3 py-1.5"
+            >
+              Open planner <ArrowRight size={12} />
             </Link>
           </div>
-          <div className="px-6 py-4 flex-1">
-            <TodayPlan tasks={tasks} guilds={guilds} />
-          </div>
-        </Card>
+          <TodayPlan tasks={tasks} guilds={guilds} />
+        </div>
 
-        <Card flush className="border-border/60 bg-bg-card flex flex-col h-full">
-          <div className="px-6 py-4 border-b border-border/60 flex items-center justify-between">
-            <CardTitle className="text-[10px] font-bold uppercase tracking-widest">Upcoming Deadlines</CardTitle>
+        <div className="card-surface p-6 flex flex-col">
+          <div className="mb-4">
+            <h3 className="font-[family-name:var(--font-heading)] text-xl font-bold m-0">
+              Coming up
+            </h3>
+            <p className="text-xs text-text-secondary mt-0.5">Next 3 days</p>
           </div>
-          <div className="px-6 py-4 flex-1">
-            <UpcomingTasks tasks={tasks} guilds={guilds} />
-          </div>
-        </Card>
+          <UpcomingTasks tasks={tasks} guilds={guilds} />
+        </div>
       </div>
 
       <DailyCheckinModal open={showCheckin} onSubmit={handleCheckin} />
@@ -226,7 +349,32 @@ export default function DashboardPage() {
   );
 }
 
-function UpcomingTasks({ tasks, guilds }: { tasks: Task[]; guilds: Map<string, Guild> }) {
+function HeroCard({
+  children,
+  glowColor,
+}: {
+  children: React.ReactNode;
+  glowColor: string;
+}) {
+  return (
+    <div
+      className="card-surface p-5 min-h-[200px] flex flex-col"
+      style={{
+        background: `radial-gradient(ellipse at top right, ${glowColor}, transparent 60%), linear-gradient(180deg, var(--color-bg-card), var(--color-bg-1))`,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function UpcomingTasks({
+  tasks,
+  guilds,
+}: {
+  tasks: Task[];
+  guilds: Map<string, Guild>;
+}) {
   const now = new Date();
   const threeDaysOut = new Date();
   threeDaysOut.setDate(now.getDate() + 3);
@@ -234,30 +382,63 @@ function UpcomingTasks({ tasks, guilds }: { tasks: Task[]; guilds: Map<string, G
   const today = now.toISOString().split("T")[0];
 
   const upcoming = tasks
-    .filter((t) => t.due_date && t.due_date >= today && t.due_date <= cutoff && t.status !== "done")
+    .filter(
+      (t) =>
+        t.due_date &&
+        t.due_date >= today &&
+        t.due_date <= cutoff &&
+        t.status !== "done"
+    )
     .sort((a, b) => (a.due_date! > b.due_date! ? 1 : -1))
-    .slice(0, 10);
+    .slice(0, 6);
 
   if (upcoming.length === 0) {
     return (
-      <div className="h-full flex flex-col items-center justify-center text-center p-4">
-        <p className="text-[10px] font-bold uppercase tracking-widest text-text-muted mb-1 opacity-50">Clear Skies</p>
-        <p className="text-xs text-text-muted">No deadlines in the next 3 days.</p>
+      <div className="flex-1 flex flex-col items-center justify-center text-center p-4 gap-3">
+        <Sticker shape="squircle" color="#FFC857" size={44} expression="happy" />
+        <div>
+          <p className="text-sm font-medium">Light week ahead.</p>
+          <p className="text-xs text-text-secondary mt-1">
+            Maybe schedule that long walk you keep mentioning.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-2.5">
       {upcoming.map((task) => {
         const guild = task.guild_id ? guilds.get(task.guild_id) : null;
+        const dueLabel = formatDueLabel(task.due_date!);
+        const priorityClass =
+          task.priority === "urgent"
+            ? "pill-red"
+            : task.priority === "low"
+            ? "pill-leaf"
+            : "pill-sun";
         return (
-          <div key={task.id} className="flex items-center gap-3 py-3 px-2 rounded hover:bg-bg-primary/50 transition-colors text-sm group">
-            <div className="w-1 h-3 rounded-full flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" style={{ backgroundColor: guild?.color ?? "var(--color-text-muted)" }} />
-            <span className="truncate flex-1 font-medium text-text-secondary group-hover:text-text-primary transition-colors">{task.title}</span>
-            <span className="text-[10px] font-mono text-text-muted flex-shrink-0 tabular-nums">
-              {new Date(task.due_date!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-            </span>
+          <div
+            key={task.id}
+            className="p-3.5 rounded-2xl bg-white/[0.025] shadow-[0_0_0_1px_var(--color-border)_inset]"
+          >
+            <div className="flex justify-between mb-2 items-center gap-2">
+              <span className="pill">{dueLabel}</span>
+              <span className={`pill ${priorityClass}`}>{task.priority}</span>
+            </div>
+            <div className="text-sm font-medium mb-1.5 line-clamp-2">{task.title}</div>
+            {guild && (
+              <div className="text-[11px] text-text-muted flex items-center gap-1.5">
+                <span
+                  className="w-2 h-2 rounded-full inline-block"
+                  style={{
+                    background: guild.color,
+                    boxShadow: `0 0 8px ${guild.color}`,
+                  }}
+                />
+                {guild.name}
+              </div>
+            )}
           </div>
         );
       })}
@@ -265,30 +446,34 @@ function UpcomingTasks({ tasks, guilds }: { tasks: Task[]; guilds: Map<string, G
   );
 }
 
+function formatDueLabel(due: string): string {
+  const d = new Date(due);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff < 7) return d.toLocaleDateString("en-US", { weekday: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 function DashboardSkeleton() {
   return (
-    <div className="animate-pulse flex flex-col gap-6 min-h-[calc(100vh-140px)]">
-      <div className="grid gap-6 lg:grid-cols-4">
-        <Skeleton className="h-40 rounded-lg border-border/60" />
-        <Skeleton className="h-40 rounded-lg border-border/60" />
-        <Skeleton className="lg:col-span-2 h-40 rounded-lg border-border/60" />
+    <div className="animate-pulse flex flex-col gap-5">
+      <div className="h-12 w-1/2 animate-shimmer rounded" />
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-52 rounded-3xl" />
+        ))}
       </div>
-      
-      <div className="flex items-center justify-between px-1">
-        <Skeleton className="h-3 w-40 rounded" />
-        <Skeleton className="h-8 w-32 rounded" />
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-40 rounded-3xl" />
+        ))}
       </div>
-
-      <div className="grid gap-6 grid-cols-2 lg:grid-cols-4">
-        <Skeleton className="h-40 rounded-lg border-border/60" />
-        <Skeleton className="h-40 rounded-lg border-border/60" />
-        <Skeleton className="h-40 rounded-lg border-border/60" />
-        <Skeleton className="h-40 rounded-lg border-border/60" />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3 flex-1">
-        <Skeleton className="lg:col-span-2 min-h-[400px] rounded-lg border-border/60" />
-        <Skeleton className="min-h-[400px] rounded-lg border-border/60" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Skeleton className="lg:col-span-2 min-h-[400px] rounded-3xl" />
+        <Skeleton className="min-h-[400px] rounded-3xl" />
       </div>
     </div>
   );

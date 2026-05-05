@@ -198,19 +198,24 @@ export function WeekView({ dates, tasks, guilds, dayLogs, onTaskClick, onSlotCli
   const showTimeLine = timeLineTop >= 0 && timeLineTop <= TOTAL_HOURS * HOUR_HEIGHT;
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="card-surface overflow-hidden">
       {/* Day headers */}
-      <div className="flex border-b border-border bg-bg-card">
+      <div className="flex border-b border-border">
         <div className="w-16 flex-shrink-0 border-r border-border" />
         {dates.map((date) => {
           const today = isToday(date);
           return (
             <div
               key={toDateString(date)}
-              className={`flex-1 min-w-[100px] text-center py-2.5 border-r border-border last:border-r-0 ${today ? "bg-bg-elevated/50" : ""}`}
+              className="flex-1 min-w-[100px] text-center py-3 border-r border-border last:border-r-0"
             >
-              <p className="text-xs text-text-muted">{formatDayShort(date)}</p>
-              <p className={`text-sm font-medium ${today ? "text-text-primary" : "text-text-secondary"}`}>
+              <p className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-widest">
+                {formatDayShort(date)}
+              </p>
+              <p
+                className={`font-[family-name:var(--font-heading)] font-bold mt-0.5 ${today ? "text-sun" : "text-text-primary"}`}
+                style={{ fontSize: 22 }}
+              >
                 {date.getDate()}
               </p>
             </div>
@@ -339,16 +344,16 @@ export function WeekView({ dates, tasks, guilds, dayLogs, onTaskClick, onSlotCli
                       onTaskClick?.(task, dateStr, scheduledHour);
                     }}
                     className={`
-                      absolute left-1 right-1 rounded-md border-l-2 bg-bg-elevated
-                      hover:bg-bg-hover transition-colors overflow-hidden px-2 py-1
-                      select-none z-20 group/block
-                      ${isDayCompleted ? "opacity-50" : "cursor-grab active:cursor-grabbing"}
+                      absolute left-1 right-1 rounded-[10px] overflow-hidden px-2.5 py-1.5
+                      select-none z-20 group/block transition-transform
+                      ${isDayCompleted ? "opacity-55" : "cursor-grab active:cursor-grabbing hover:-translate-y-0.5"}
                       ${draggingTaskId === task.id ? "opacity-40" : ""}
                     `}
                     style={{
                       top: topPx + 1,
                       height: heightPx,
-                      borderLeftColor: guildColor,
+                      background: `linear-gradient(180deg, ${guildColor}40, ${guildColor}20)`,
+                      boxShadow: `0 0 0 1px ${guildColor}55 inset, 0 0 12px ${guildColor}25`,
                     }}
                   >
                     {/* Complete day button */}

@@ -1,22 +1,30 @@
 import type { Metadata } from "next";
-import { Outfit, IBM_Plex_Sans } from "next/font/google";
+import { Space_Grotesk, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const outfit = Outfit({
+const spaceGrotesk = Space_Grotesk({
   variable: "--font-heading",
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
-const ibmPlex = IBM_Plex_Sans({
+const inter = Inter({
   variable: "--font-body",
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const jetBrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Wave Plan",
+  title: "Wave Plan — catch the day",
   description: "Gamified multi-job task tracker with burnout awareness",
   manifest: "/manifest.json",
 };
@@ -27,7 +35,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${outfit.variable} ${ibmPlex.variable}`}>
+    <html
+      lang="en"
+      className={`${spaceGrotesk.variable} ${inter.variable} ${jetBrainsMono.variable}`}
+    >
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );

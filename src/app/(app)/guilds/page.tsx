@@ -6,12 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { getGuilds, createGuild } from "@/lib/supabase/queries/guilds";
 import { Guild } from "@/lib/types";
 import { GuildCard } from "@/components/guilds/guild-card";
-import { Button } from "@/components/ui/button";
 import { Modal } from "@/components/ui/modal";
 import { GuildForm } from "@/components/guilds/guild-form";
 import { SkeletonGrid } from "@/components/ui/skeleton";
-import { EmptyState } from "@/components/ui/empty-state";
-import { NavIcon } from "@/components/layout/nav-icon";
+import { Sticker } from "@/components/ui/sticker";
+import { Icon } from "@/components/ui/icon";
 
 export default function GuildsPage() {
   const [guilds, setGuilds] = useState<Guild[]>([]);
@@ -46,37 +45,52 @@ export default function GuildsPage() {
   if (loading) {
     return (
       <div className="animate-fade-in">
-        <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
-          <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Guilds</h1>
-        </div>
         <SkeletonGrid count={6} />
       </div>
     );
   }
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
-        <h1 className="text-2xl font-bold font-[family-name:var(--font-heading)]">Guilds</h1>
-        <Button onClick={() => setShowCreate(true)}>New Guild</Button>
+    <div className="animate-fade-in flex flex-col gap-5">
+      <div className="flex justify-between items-end gap-4 flex-wrap">
+        <div>
+          <h1
+            className="font-[family-name:var(--font-heading)] font-bold m-0"
+            style={{ fontSize: 32, letterSpacing: "-0.02em" }}
+          >
+            Your crews
+          </h1>
+          <p className="text-text-secondary mt-1.5 m-0">
+            Group quests by the part of you that&apos;s doing them.
+          </p>
+        </div>
+        <button onClick={() => setShowCreate(true)} className="btn btn-primary">
+          <Icon name="plus" size={14} /> New guild
+        </button>
       </div>
 
-      {guilds.length === 0 ? (
-        <EmptyState
-          icon={<NavIcon name="shield" size={24} />}
-          title="No guilds yet"
-          description="Guilds represent your jobs, roles, or areas of responsibility. Create your first guild to start organizing your tasks."
-          action={
-            <Button onClick={() => setShowCreate(true)}>Create your first guild</Button>
-          }
-        />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {guilds.map((guild) => (
-            <GuildCard key={guild.id} guild={guild} />
-          ))}
-        </div>
-      )}
+      <div className="grid gap-4 grid-cols-[repeat(auto-fill,minmax(240px,1fr))]">
+        {guilds.map((guild) => (
+          <GuildCard key={guild.id} guild={guild} />
+        ))}
+
+        <button
+          onClick={() => setShowCreate(true)}
+          className="card-surface min-h-[220px] p-6 flex flex-col items-center justify-center gap-3 text-center cursor-pointer"
+          style={{
+            background: "rgba(255,109,41,0.04)",
+            boxShadow: "0 0 0 1.5px rgba(255,109,41,0.25) inset",
+          }}
+        >
+          <Sticker shape="squircle" color="#FF6D29" size={64} expression="happy" />
+          <div className="font-[family-name:var(--font-heading)] font-semibold text-base">
+            Start a new crew
+          </div>
+          <div className="text-xs text-text-secondary max-w-[160px]">
+            For that side project, hobby, or that thing you keep meaning to start.
+          </div>
+        </button>
+      </div>
 
       <Modal open={showCreate} onClose={() => setShowCreate(false)} title="New Guild">
         <GuildForm onSubmit={handleCreate} onCancel={() => setShowCreate(false)} />

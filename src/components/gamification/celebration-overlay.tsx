@@ -3,6 +3,7 @@
 import { useCelebration } from "@/contexts/celebration-context";
 import { ConfettiBurst } from "./confetti-burst";
 import { XpToast } from "./xp-toast";
+import { StreakToast } from "./streak-toast";
 import { LevelUp } from "./level-up";
 import { PerfectDay } from "./perfect-day";
 
@@ -10,10 +11,12 @@ export function CelebrationOverlay() {
   const {
     confettiQueue,
     toastQueue,
+    streakEvents,
     levelUp,
     perfectDay,
     removeConfetti,
     removeToast,
+    removeStreakEvent,
     clearLevelUp,
     clearPerfectDay,
   } = useCelebration();
@@ -35,6 +38,15 @@ export function CelebrationOverlay() {
           xp={toast.xp}
           offsetIndex={i}
           onDone={() => removeToast(toast.id)}
+        />
+      ))}
+
+      {streakEvents.map((evt, i) => (
+        <StreakToast
+          key={evt.id}
+          event={evt}
+          offsetIndex={toastQueue.length + i}
+          onDone={() => removeStreakEvent(evt.id)}
         />
       ))}
 
