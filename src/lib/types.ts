@@ -12,6 +12,8 @@ export interface Profile {
   current_streak: number;
   longest_streak: number;
   last_activity_date: string | null;
+  streak_shields_remaining: number;
+  last_streak_check_date: string | null;
   created_at: string;
 }
 

@@ -1,3 +1,8 @@
+export const STREAK_PENALTY_PER_DAY = 10;
+export const STREAK_PENALTY_CAP = 200;
+export const SHIELD_INTERVAL_DAYS = 7;
+export const SHIELD_MAX = 2;
+
 export function calculateStreak(
   activityDates: string[],
   today: string
@@ -30,4 +35,46 @@ export function calculateStreak(
   }
 
   return streak;
+}
+
+function daysBetween(fromIso: string, toIso: string): number {
+  const from = new Date(fromIso);
+  const to = new Date(toIso);
+  return Math.floor((to.getTime() - from.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+export function getStreakPenalty(brokenStreak: number): number {
+  if (brokenStreak <= 0) return 0;
+  return Math.min(brokenStreak * STREAK_PENALTY_PER_DAY, STREAK_PENALTY_CAP);
+}
+
+export function isStreakBroken(
+  lastActivityDate: string | null,
+  today: string
+): boolean {
+  if (!lastActivityDate) return false;
+  return daysBetween(lastActivityDate, today) > 1;
+}
+
+export function shouldEarnShield(
+  newStreak: number,
+  currentShields: number
+): boolean {
+  return (
+    newStreak > 0 &&
+    newStreak % SHIELD_INTERVAL_DAYS === 0 &&
+    currentShields < SHIELD_MAX
+  );
+}
+
+export function nextStreakValue(
+  prevStreak: number,
+  lastActivityDate: string | null,
+  today: string
+): number {
+  if (!lastActivityDate) return 1;
+  const diff = daysBetween(lastActivityDate, today);
+  if (diff <= 0) return prevStreak === 0 ? 1 : prevStreak;
+  if (diff === 1) return prevStreak + 1;
+  return 1;
 }

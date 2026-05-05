@@ -96,6 +96,23 @@ export async function updateTask(
   return data as Task;
 }
 
+export async function getCompletedTasksInRange(
+  supabase: SupabaseClient,
+  from: string,
+  to: string
+): Promise<Task[]> {
+  const { data, error } = await supabase
+    .from("tasks")
+    .select("*")
+    .eq("status", "done")
+    .gte("completed_at", from)
+    .lte("completed_at", to)
+    .order("completed_at", { ascending: false });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function deleteTask(supabase: SupabaseClient, id: string) {
   const { error } = await supabase.from("tasks").delete().eq("id", id);
   if (error) throw error;

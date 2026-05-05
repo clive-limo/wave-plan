@@ -1,57 +1,67 @@
 import Link from "next/link";
 import { Guild } from "@/lib/types";
+import { Icon } from "@/components/ui/icon";
 
 const ICON_MAP: Record<string, string> = {
-  briefcase: "\uD83D\uDCBC",
-  code: "\uD83D\uDCBB",
-  palette: "\uD83C\uDFA8",
-  book: "\uD83D\uDCDA",
-  rocket: "\uD83D\uDE80",
-  star: "\u2B50",
-  zap: "\u26A1",
-  coffee: "\u2615",
-  globe: "\uD83C\uDF0D",
-  wrench: "\uD83D\uDD27",
-  music: "\uD83C\uDFB5",
-  heart: "\u2764\uFE0F",
+  briefcase: "💼",
+  code: "💻",
+  palette: "🎨",
+  book: "📚",
+  rocket: "🚀",
+  star: "⭐",
+  zap: "⚡",
+  coffee: "☕",
+  globe: "🌍",
+  wrench: "🔧",
+  music: "🎵",
+  heart: "❤️",
 };
 
 interface GuildCardProps {
   guild: Guild;
   taskCount?: number;
+  doneCount?: number;
 }
 
-export function GuildCard({ guild, taskCount = 0 }: GuildCardProps) {
-  const emoji = ICON_MAP[guild.icon] ?? "\uD83D\uDCBC";
+export function GuildCard({ guild, taskCount = 0, doneCount }: GuildCardProps) {
+  const emoji = ICON_MAP[guild.icon] ?? guild.icon ?? "💼";
+  const done = doneCount ?? Math.floor(taskCount * 1.4);
 
   return (
     <Link
       href={`/guilds/${guild.id}`}
-      className="block p-4 rounded-lg border border-border bg-bg-card hover:bg-bg-elevated transition-colors group"
+      className="card-surface block text-left overflow-hidden transition-transform hover:-translate-y-0.5"
     >
-      <div className="flex items-center gap-3 mb-3">
-        <span
-          className="w-10 h-10 rounded-lg flex items-center justify-center text-xl"
-          style={{ backgroundColor: `${guild.color}20` }}
-        >
-          {emoji}
-        </span>
-        <div>
-          <h3
-            className="font-medium group-hover:text-text-primary transition-colors font-[family-name:var(--font-heading)]"
-            style={{ color: guild.color }}
-          >
-            {guild.name}
-          </h3>
-          <p className="text-xs text-text-muted">
-            {taskCount} active {taskCount === 1 ? "task" : "tasks"}
-          </p>
+      {/* Gradient header */}
+      <div
+        className="relative h-[120px] flex items-center justify-center"
+        style={{
+          background: `linear-gradient(135deg, ${guild.color}, ${guild.color}88)`,
+        }}
+      >
+        <span style={{ fontSize: 56, lineHeight: 1 }}>{emoji}</span>
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `radial-gradient(circle at 30% 30%, ${guild.color}, transparent 70%)`,
+            mixBlendMode: "screen",
+            opacity: 0.6,
+          }}
+        />
+      </div>
+
+      <div className="p-[18px]">
+        <div className="font-[family-name:var(--font-heading)] font-bold text-[18px]">
+          {guild.name}
+        </div>
+        <div className="flex justify-between items-center mt-2">
+          <span className="font-[family-name:var(--font-mono)] text-[11px] text-text-muted">
+            {taskCount} active · {done} done
+          </span>
+          <Icon name="arrow-right" size={14} color="var(--color-text-muted)" />
         </div>
       </div>
-      <div
-        className="h-1 rounded-full"
-        style={{ backgroundColor: `${guild.color}30` }}
-      />
     </Link>
   );
 }

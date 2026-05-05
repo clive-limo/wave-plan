@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(grep -r 'from lucide' C:/dev-files/wave-plan/src --include=*.tsx --include=*.ts -l)",
+      "Bash(mkdir -p /tmp/design)",
+      "Read(//tmp/**)",
+      "Bash(tar -xzf \"C:\\\\Users\\\\clive\\\\.claude\\\\projects\\\\C--dev-files-wave-plan\\\\687408cb-1a27-4463-a1a8-7b2338be511e\\\\tool-results\\\\webfetch-1777963082162-q898xq.bin\")",
+      "Bash(Get-ChildItem -Path \"C:\\\\dev-files\\\\wave-plan\" -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)"
     ]
   }
 }

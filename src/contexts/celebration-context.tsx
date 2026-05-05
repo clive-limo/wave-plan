@@ -4,7 +4,7 @@ import { createContext, useContext, useState, useCallback, ReactNode } from "rea
 import { Priority } from "@/lib/types";
 import { getLevelInfo } from "@/lib/levels";
 import { createClient } from "@/lib/supabase/client";
-import { awardXp } from "@/lib/supabase/queries/profile";
+import { awardXp, recordActivity } from "@/lib/supabase/queries/profile";
 
 interface CelebrationEvent {
   id: string;
@@ -27,15 +27,25 @@ interface PerfectDayInfo {
   totalXp: number;
 }
 
+export type StreakEventInput =
+  | { type: "streak-broken"; penalty: number }
+  | { type: "shield-used"; brokenStreak: number }
+  | { type: "shield-earned" };
+
+export type StreakEvent = StreakEventInput & { id: string };
+
 interface CelebrationContextValue {
   celebrate: (opts: { xp: number; priority: Priority; position?: { x: number; y: number } }) => Promise<void>;
   celebratePerfectDay: (opts: PerfectDayInfo) => void;
+  showStreakToast: (event: StreakEventInput) => void;
   confettiQueue: CelebrationEvent[];
   toastQueue: ToastEvent[];
+  streakEvents: StreakEvent[];
   levelUp: LevelUpInfo | null;
   perfectDay: PerfectDayInfo | null;
   removeConfetti: (id: string) => void;
   removeToast: (id: string) => void;
+  removeStreakEvent: (id: string) => void;
   clearLevelUp: () => void;
   clearPerfectDay: () => void;
 }
@@ -56,6 +66,7 @@ function nextId() {
 export function CelebrationProvider({ children }: { children: ReactNode }) {
   const [confettiQueue, setConfettiQueue] = useState<CelebrationEvent[]>([]);
   const [toastQueue, setToastQueue] = useState<ToastEvent[]>([]);
+  const [streakEvents, setStreakEvents] = useState<StreakEvent[]>([]);
   const [levelUp, setLevelUp] = useState<LevelUpInfo | null>(null);
   const [perfectDay, setPerfectDay] = useState<PerfectDayInfo | null>(null);
 
@@ -67,8 +78,17 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
     setToastQueue((prev) => prev.filter((e) => e.id !== id));
   }, []);
 
+  const removeStreakEvent = useCallback((id: string) => {
+    setStreakEvents((prev) => prev.filter((e) => e.id !== id));
+  }, []);
+
   const clearLevelUp = useCallback(() => setLevelUp(null), []);
   const clearPerfectDay = useCallback(() => setPerfectDay(null), []);
+
+  const showStreakToast = useCallback((event: StreakEventInput) => {
+    const id = nextId();
+    setStreakEvents((prev) => [...prev, { ...event, id } as StreakEvent]);
+  }, []);
 
   const celebrate = useCallback(async (opts: {
     xp: number;
@@ -87,7 +107,7 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       setToastQueue((prev) => [...prev, { id: toastId, xp: opts.xp }]);
     }, 400);
 
-    // Persist XP and check for level-up
+    // Persist XP, update streak, check for level-up
     try {
       const supabase = createClient();
       const { oldTotal, newTotal } = await awardXp(supabase, opts.xp);
@@ -100,8 +120,16 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
           setLevelUp({ level: newLevel.level, title: newLevel.title });
         }, 2500);
       }
+
+      const activityResult = await recordActivity(supabase);
+      if (activityResult?.shieldEarned) {
+        setTimeout(() => {
+          const id = nextId();
+          setStreakEvents((prev) => [...prev, { id, type: "shield-earned" }]);
+        }, 1200);
+      }
     } catch {
-      // XP persistence failed silently — celebrations still show
+      // Persistence failed silently — celebrations still show
     }
   }, []);
 
@@ -114,12 +142,15 @@ export function CelebrationProvider({ children }: { children: ReactNode }) {
       value={{
         celebrate,
         celebratePerfectDay,
+        showStreakToast,
         confettiQueue,
         toastQueue,
+        streakEvents,
         levelUp,
         perfectDay,
         removeConfetti,
         removeToast,
+        removeStreakEvent,
         clearLevelUp,
         clearPerfectDay,
       }}

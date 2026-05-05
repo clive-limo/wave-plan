@@ -6,11 +6,12 @@ interface EmptyStateProps {
   description: string;
   action?: ReactNode;
   children?: ReactNode;
+  className?: string;
 }
 
-export function EmptyState({ icon, title, description, action, children }: EmptyStateProps) {
+export function EmptyState({ icon, title, description, action, children, className = "" }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-4">
+    <div className={`flex flex-col items-center justify-center py-20 px-4 ${className}`}>
       <div className="w-14 h-14 rounded-xl bg-bg-elevated border border-border flex items-center justify-center text-2xl mb-5">
         {icon}
       </div>

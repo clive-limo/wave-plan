@@ -51,6 +51,34 @@ export function formatMonthYear(date: Date): string {
   return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
+export type StatPeriod = "this-week" | "7-days" | "this-month" | "30-days";
+
+export function getPeriodRange(period: StatPeriod): { from: string; to: string } {
+  const now = new Date();
+  const to = toDateString(now);
+
+  switch (period) {
+    case "this-week": {
+      const weekDates = getWeekDates(now);
+      return { from: toDateString(weekDates[0]), to: toDateString(weekDates[6]) };
+    }
+    case "7-days": {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 6);
+      return { from: toDateString(d), to };
+    }
+    case "this-month": {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      return { from: toDateString(first), to };
+    }
+    case "30-days": {
+      const d = new Date(now);
+      d.setDate(d.getDate() - 29);
+      return { from: toDateString(d), to };
+    }
+  }
+}
+
 export function formatWeekRange(dates: Date[]): string {
   if (dates.length === 0) return "";
   const start = dates[0];
