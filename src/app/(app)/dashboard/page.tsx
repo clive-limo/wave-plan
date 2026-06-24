@@ -246,12 +246,12 @@ export default function DashboardPage() {
   return (
     <div className="animate-fade-in flex flex-col gap-5">
       {/* Greeting */}
-      <div className="flex items-start gap-4 flex-wrap">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:gap-4">
         <div className="flex-1 min-w-0">
           <div className="font-[family-name:var(--font-mono)] text-[11px] text-text-muted uppercase tracking-[.15em] mb-1">
             {dateLabel}
           </div>
-          <h1 className="font-[family-name:var(--font-heading)] text-3xl md:text-[32px] font-bold tracking-tight m-0">
+          <h1 className="font-[family-name:var(--font-heading)] text-2xl sm:text-3xl md:text-[32px] font-bold tracking-tight m-0">
             Morning, {firstName}.{" "}
             <span className="text-gold">The water&apos;s good.</span>
           </h1>
@@ -261,14 +261,14 @@ export default function DashboardPage() {
             {urgentToday > 0 && <> · {urgentToday} urgent thing{urgentToday === 1 ? "" : "s"} waiting on you.</>}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <button
             onClick={() => setShowCheckin(true)}
-            className="btn btn-ghost"
+            className="btn btn-ghost flex-1 sm:flex-none"
           >
             <Heart size={14} /> Check in
           </button>
-          <Link href="/side-quests" className="btn btn-primary">
+          <Link href="/side-quests" className="btn btn-primary flex-1 sm:flex-none">
             <Plus size={14} /> New quest
           </Link>
         </div>
@@ -437,9 +437,9 @@ export default function DashboardPage() {
             </div>
             <Link
               href="/planner"
-              className="btn btn-ghost text-xs px-3 py-1.5"
+              className="btn btn-ghost text-[11px] px-2.5 py-1 flex-shrink-0"
             >
-              Open planner <ArrowRight size={12} />
+              Open planner <ArrowRight size={11} />
             </Link>
           </div>
           <TodayPlan tasks={tasks} guilds={guilds} />

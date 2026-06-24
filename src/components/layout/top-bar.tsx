@@ -52,9 +52,9 @@ export function TopBar() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-30 flex items-center gap-4 px-6 py-3.5 border-b border-border bg-bg-primary/85 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 flex items-center gap-4 px-4 sm:px-6 py-3.5 border-b border-border bg-bg-primary/85 backdrop-blur-xl">
       <div className="flex-1 min-w-0">
-        <h1 className="text-[22px] font-bold tracking-tight font-[family-name:var(--font-heading)] truncate m-0">
+        <h1 className="text-lg sm:text-[22px] font-bold tracking-tight font-[family-name:var(--font-heading)] truncate m-0">
           {title}
         </h1>
         {subtitle && (
