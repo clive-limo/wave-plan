@@ -84,3 +84,24 @@ export interface TaskDayLog {
   notes: string | null;
   scheduled_hour: number | null;
 }
+
+export interface Routine {
+  id: string;
+  user_id: string;
+  title: string;
+  icon: string;
+  color: string;
+  recurrence_rule: string | null;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface RoutineLog {
+  id: string;
+  routine_id: string;
+  user_id: string;
+  date: string;
+  completed: boolean;
+  created_at: string;
+}

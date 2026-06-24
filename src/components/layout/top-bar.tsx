@@ -8,6 +8,7 @@ import { Icon } from "@/components/ui/icon";
 const PAGE_META: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "Dashboard", subtitle: "Catch the day before it catches you." },
   "/planner": { title: "Planner", subtitle: "Block the day. Ride the wave." },
+  "/routines": { title: "Routines", subtitle: "Small rituals, big momentum." },
   "/guilds": { title: "Guilds", subtitle: "The crews you ride with." },
   "/side-quests": { title: "Side Quests", subtitle: "Life beyond the laptop." },
   "/character": { title: "Character", subtitle: "Who you're becoming." },

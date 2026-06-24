@@ -5,10 +5,20 @@ import { createClient } from "@/lib/supabase/client";
 import { getGuilds } from "@/lib/supabase/queries/guilds";
 import { getActiveTasks, getCompletedTasksInRange } from "@/lib/supabase/queries/tasks";
 import { getTodayCheckin, getRecentCheckins, createCheckin } from "@/lib/supabase/queries/checkins";
+import {
+  getRoutines,
+  getRoutineLogs,
+  getRoutineCompletionCounts,
+  setRoutineCompletion,
+} from "@/lib/supabase/queries/routines";
+import { parseRecurrenceRule, isRecurringOnDate } from "@/lib/recurrence";
 import { calculateHp, getHpColor, getHpLabel } from "@/lib/hp";
 import { getLevelInfo, getXpProgress } from "@/lib/levels";
 import { getPeriodRange, StatPeriod, toDateString } from "@/lib/date-utils";
-import { Guild, Task, Profile, DailyCheckin, Mood } from "@/lib/types";
+import { Guild, Task, Profile, DailyCheckin, Mood, Routine, RoutineLog } from "@/lib/types";
+import { useCelebration } from "@/contexts/celebration-context";
+import { RoutineCard } from "@/components/routines/routine-card";
+import { RoutineMomentum } from "@/components/dashboard/routine-momentum";
 import { TodayPlan } from "@/components/dashboard/today-plan";
 import { EnergySparkline } from "@/components/dashboard/energy-sparkline";
 import { WeeklyCompletion } from "@/components/dashboard/weekly-completion";
@@ -22,33 +32,64 @@ import { Sticker, CharacterGauge } from "@/components/ui/sticker";
 import { Heart, Plus, ArrowRight, Shield, Flame } from "lucide-react";
 import Link from "next/link";
 
+const ROUTINE_XP = 25;
+const ROUTINE_HISTORY_DAYS = 30;
+
 export default function DashboardPage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [guilds, setGuilds] = useState<Map<string, Guild>>(new Map());
   const [tasks, setTasks] = useState<Task[]>([]);
   const [checkins, setCheckins] = useState<DailyCheckin[]>([]);
   const [completedTasks, setCompletedTasks] = useState<Task[]>([]);
+  const [routines, setRoutines] = useState<Routine[]>([]);
+  const [routineLogs, setRoutineLogs] = useState<RoutineLog[]>([]);
+  const [routineCounts, setRoutineCounts] = useState<Record<string, number>>({});
   const [period, setPeriod] = useState<StatPeriod>("this-week");
   const [showCheckin, setShowCheckin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const { celebrate } = useCelebration();
+
   const load = useCallback(async () => {
     const supabase = createClient();
     const { from, to } = getPeriodRange(period);
-    const [guildList, taskList, completed, recentCheckins, todayCheckin, { data: { user } }] =
-      await Promise.all([
-        getGuilds(supabase),
-        getActiveTasks(supabase),
-        getCompletedTasksInRange(supabase, from, to),
-        getRecentCheckins(supabase, 7),
-        getTodayCheckin(supabase),
-        supabase.auth.getUser(),
-      ]);
+
+    // Routines use a fixed 30-day window, independent of the task-stats period.
+    const routineToDate = new Date();
+    const routineFromDate = new Date();
+    routineFromDate.setDate(routineFromDate.getDate() - (ROUTINE_HISTORY_DAYS - 1));
+    const routineFrom = toDateString(routineFromDate);
+    const routineTo = toDateString(routineToDate);
+
+    const [
+      guildList,
+      taskList,
+      completed,
+      recentCheckins,
+      todayCheckin,
+      routineList,
+      routineLogList,
+      routineCountMap,
+      { data: { user } },
+    ] = await Promise.all([
+      getGuilds(supabase),
+      getActiveTasks(supabase),
+      getCompletedTasksInRange(supabase, from, to),
+      getRecentCheckins(supabase, 7),
+      getTodayCheckin(supabase),
+      getRoutines(supabase),
+      getRoutineLogs(supabase, routineFrom, routineTo),
+      getRoutineCompletionCounts(supabase),
+      supabase.auth.getUser(),
+    ]);
 
     setGuilds(new Map(guildList.map((g) => [g.id, g])));
     setTasks(taskList);
     setCompletedTasks(completed);
     setCheckins(recentCheckins);
+    setRoutines(routineList);
+    setRoutineLogs(routineLogList);
+    setRoutineCounts(routineCountMap);
 
     if (user) {
       const { data: profileData } = await supabase
@@ -68,6 +109,49 @@ export default function DashboardPage() {
     setShowCheckin(false);
   }
 
+  async function handleRoutineToggle(
+    id: string,
+    done: boolean,
+    position?: { x: number; y: number }
+  ) {
+    const todayStr = toDateString(new Date());
+
+    // Optimistic update of the per-day logs + all-time counts.
+    setRoutineLogs((prev) => {
+      if (done) {
+        if (prev.some((l) => l.routine_id === id && l.date === todayStr)) return prev;
+        return [
+          ...prev,
+          {
+            id: `optimistic-${id}-${todayStr}`,
+            routine_id: id,
+            user_id: "",
+            date: todayStr,
+            completed: true,
+            created_at: "",
+          },
+        ];
+      }
+      return prev.filter((l) => !(l.routine_id === id && l.date === todayStr));
+    });
+    setRoutineCounts((prev) => ({
+      ...prev,
+      [id]: Math.max(0, (prev[id] ?? 0) + (done ? 1 : -1)),
+    }));
+
+    const supabase = createClient();
+    try {
+      await setRoutineCompletion(supabase, id, todayStr, done);
+    } catch {
+      return; // leave optimistic UI; a reload reconciles
+    }
+
+    // XP + streak + confetti on completion only (undo is XP-neutral).
+    if (done) {
+      await celebrate({ xp: ROUTINE_XP, priority: "low", position });
+    }
+  }
+
   if (loading) {
     return <DashboardSkeleton />;
   }
@@ -76,7 +160,7 @@ export default function DashboardPage() {
   const totalXp = profile?.total_xp ?? 0;
   const levelInfo = getLevelInfo(totalXp);
   const xpProgress = getXpProgress(totalXp);
-  const hasNoData = guilds.size === 0 && tasks.length === 0;
+  const hasNoData = guilds.size === 0 && tasks.length === 0 && routines.length === 0;
 
   if (hasNoData) {
     return (
@@ -124,6 +208,23 @@ export default function DashboardPage() {
   const todayDoneCount = todayTasks.filter((t) => t.status === "done").length;
   const todayTotal = todayTasks.length;
   const urgentToday = todayTasks.filter((t) => t.priority === "urgent" && t.status !== "done").length;
+
+  // Routines scheduled today + which are already checked off.
+  const todayDate = new Date();
+  const todaysRoutines = routines.filter((r) =>
+    isRecurringOnDate(
+      parseRecurrenceRule(r.recurrence_rule) ?? { frequency: "daily" },
+      todayDate,
+      r.created_at
+    )
+  );
+  const completedRoutineToday = new Set(
+    routineLogs.filter((l) => l.date === today).map((l) => l.routine_id)
+  );
+  const doneRoutines = todaysRoutines.filter((r) => completedRoutineToday.has(r.id)).length;
+  const routineFrom = toDateString(
+    new Date(todayDate.getTime() - (ROUTINE_HISTORY_DAYS - 1) * 86400000)
+  );
 
   const energyAvg = checkins.length
     ? checkins.reduce((s, c) => s + c.energy, 0) / checkins.length
@@ -311,6 +412,17 @@ export default function DashboardPage() {
         </div>
       </section>
 
+      {/* Routine momentum */}
+      {routines.length > 0 && (
+        <RoutineMomentum
+          routines={routines}
+          logs={routineLogs}
+          counts={routineCounts}
+          today={todayDate}
+          from={routineFrom}
+        />
+      )}
+
       {/* Today + Upcoming */}
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-3">
         <div className="card-surface p-6 lg:col-span-2 flex flex-col">
@@ -334,6 +446,27 @@ export default function DashboardPage() {
         </div>
 
         <div className="card-surface p-6 flex flex-col">
+          {todaysRoutines.length > 0 && (
+            <div className="mb-5 flex flex-col gap-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold uppercase tracking-widest text-text-muted">
+                  Today&apos;s routines
+                </span>
+                <span className="text-[11px] text-text-muted tabular-nums">
+                  {doneRoutines} / {todaysRoutines.length}
+                </span>
+              </div>
+              {todaysRoutines.map((r) => (
+                <RoutineCard
+                  key={r.id}
+                  routine={r}
+                  done={completedRoutineToday.has(r.id)}
+                  onToggle={handleRoutineToggle}
+                />
+              ))}
+              <div className="h-px bg-border-light/60 mt-3" />
+            </div>
+          )}
           <div className="mb-4">
             <h3 className="font-[family-name:var(--font-heading)] text-xl font-bold m-0">
               Coming up
