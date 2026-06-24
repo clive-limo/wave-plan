@@ -77,14 +77,6 @@ export function RoutineMomentum({ routines, logs, counts, today, from }: Routine
             <div className="text-sm font-semibold">Done today</div>
           </div>
         </div>
-
-        {/* View all — sits next to the title on mobile */}
-        <Link
-          href="/routines"
-          className="btn btn-ghost text-[11px] px-2.5 py-1 flex-shrink-0 sm:hidden"
-        >
-          View all <Icon name="arrow-right" size={11} />
-        </Link>
       </div>
 
       <div className="flex items-center gap-6 flex-wrap flex-1">
@@ -108,10 +100,9 @@ export function RoutineMomentum({ routines, logs, counts, today, from }: Routine
         />
       </div>
 
-      {/* View all — far right on desktop */}
       <Link
         href="/routines"
-        className="btn btn-ghost text-xs px-3 py-1.5 flex-shrink-0 hidden sm:inline-flex"
+        className="btn btn-ghost text-xs px-3 py-1.5 flex-shrink-0"
       >
         View all <Icon name="arrow-right" size={12} />
       </Link>
