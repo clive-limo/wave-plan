@@ -59,22 +59,32 @@ export function RoutineMomentum({ routines, logs, counts, today, from }: Routine
   }, [routines, completedByRoutine, counts, today, to, from]);
 
   return (
-    <section className="card-surface p-5 flex items-center gap-5 flex-wrap">
-      <div className="flex items-center gap-3 flex-shrink-0">
-        <CircularProgress
-          value={stats.doneToday}
-          max={Math.max(stats.todaysCount, 1)}
-          size={56}
-          strokeWidth={5}
-          color="var(--color-sun)"
-          label={`${stats.doneToday}/${stats.todaysCount}`}
-        />
-        <div>
-          <div className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-[.15em]">
-            Routine momentum
+    <section className="card-surface p-5 flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 flex-shrink-0">
+          <CircularProgress
+            value={stats.doneToday}
+            max={Math.max(stats.todaysCount, 1)}
+            size={56}
+            strokeWidth={5}
+            color="var(--color-sun)"
+            label={`${stats.doneToday}/${stats.todaysCount}`}
+          />
+          <div>
+            <div className="font-[family-name:var(--font-mono)] text-[10px] text-text-muted uppercase tracking-[.15em]">
+              Routine momentum
+            </div>
+            <div className="text-sm font-semibold">Done today</div>
           </div>
-          <div className="text-sm font-semibold">Done today</div>
         </div>
+
+        {/* View all — sits next to the title on mobile */}
+        <Link
+          href="/routines"
+          className="btn btn-ghost text-[11px] px-2.5 py-1 flex-shrink-0 sm:hidden"
+        >
+          View all <Icon name="arrow-right" size={11} />
+        </Link>
       </div>
 
       <div className="flex items-center gap-6 flex-wrap flex-1">
@@ -98,9 +108,10 @@ export function RoutineMomentum({ routines, logs, counts, today, from }: Routine
         />
       </div>
 
+      {/* View all — far right on desktop */}
       <Link
         href="/routines"
-        className="btn btn-ghost text-xs px-3 py-1.5 flex-shrink-0"
+        className="btn btn-ghost text-xs px-3 py-1.5 flex-shrink-0 hidden sm:inline-flex"
       >
         View all <Icon name="arrow-right" size={12} />
       </Link>
